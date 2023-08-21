@@ -3,6 +3,7 @@ import { omit } from 'ramda'
 import Error from '../../interfaces/error.interfaces'
 import { validationCreateContact, validationObjectId, validationUpdateContact } from '../../validator'
 import { ContactService } from './Contact'
+import { Contact } from './types'
 
 const contactService = new ContactService()
 
@@ -65,7 +66,7 @@ export const deleteContact = async (req: Request, res: Response, next: NextFunct
     await contactService.contactDelete(value)
     res.json({
       status: 'succss',
-      data: value,
+      data: value as Contact,
       message: 'delete Contact succss',
     })
   } catch (error) {

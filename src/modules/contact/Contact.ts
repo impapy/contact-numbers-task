@@ -4,16 +4,7 @@ import { DBCollections, ResourcesSortOptions } from '../../types'
 import { parsePhoneNumber, sanitizeUsername } from '../../helpers'
 import Error from '../../interfaces/error.interfaces'
 import secrets from '../../secrets'
-import {
-  Contact,
-  ContactAddInput,
-  ContactEditInput,
-  ContactFilterInput,
-  ContactGetResponse,
-  ContactsGetInput,
-  ContactsSort,
-  Keysof,
-} from './types'
+import { Contact, ContactAddInput, ContactEditInput, ContactFilterInput, ContactGetResponse, ContactsGetInput, ContactsSort, Keysof } from './types'
 import { PER_PAGE } from '../../constants'
 import { mergeDeepRight, omit } from 'ramda'
 
@@ -130,6 +121,6 @@ export class ContactService {
   }
 
   async contactDelete(filter: { _id: string }, session?: ClientSession): Promise<ObjectId> {
-    return await this.contactEdit(filter, { isDeleted: true } as any, session)
+    return (await this.contactEdit(filter, { isDeleted: true } as any, session))._id
   }
 }
