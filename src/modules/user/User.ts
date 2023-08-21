@@ -1,12 +1,14 @@
-import { ClientSession, ObjectId } from 'mongodb'
+import { ClientSession, FilterQuery, ObjectId } from 'mongodb'
 import { db } from '../../db'
-import { DBCollections } from '../../types'
-import { LoginResponse, User, UserAddInput } from './types'
+import { DBCollections, ResourcesSortOptions } from '../../types'
+import { LoginResponse, User, UserAddInput, UserFilterInput, UserGetResponse, UsersGetInput, UsersSort } from './types'
 import { sanitizeUsername } from '../../helpers'
 import { compare, genSalt, hash } from 'bcryptjs'
 import Error from '../../interfaces/error.interfaces'
 import secrets from '../../secrets'
 import { sign } from 'jsonwebtoken'
+import { mergeDeepRight } from 'ramda'
+import { PER_PAGE } from '../../constants'
 
 export class UserService {
   async hashPassword(password: string): Promise<string> {
@@ -26,6 +28,32 @@ export class UserService {
     return token
   }
 
+  protected sort(sort: UsersSort = UsersSort.NEWEST): ResourcesSortOptions[UsersSort] {
+    const options: ResourcesSortOptions = {
+      NEWEST: { createdAt: -1 },
+      OLDEST: { createdAt: 1 },
+    }
+
+    return options[sort] || sort
+  }
+
+  protected filter(filter: UserFilterInput): FilterQuery<User> {
+    const symbolsRegex = /[.*+?^${}()|[\]\\]/g
+    const searchObject = filter.searchTerm && {
+      $regex: filter.searchTerm.replace(symbolsRegex, '\\$&'),
+      $options: 'i',
+    }
+    return {
+      ...(filter.searchTerm && {
+        username: searchObject,
+      }),
+      ...(filter.islogin && {
+        islogin: filter.islogin,
+      }),
+      isDeleted: false,
+    }
+  }
+
   async creat(userAddInput: Omit<UserAddInput, 'createdAt' | 'modifiedAt' | 'isDeleted' | 'userSigningKey'>, session?: ClientSession): Promise<User> {
     try {
       const sanitizedUsername = sanitizeUsername(userAddInput.username)
@@ -38,7 +66,7 @@ export class UserService {
       const hashPassword = await this.hashPassword(userAddInput.password)
       const now = new Date()
       const result = await db.collection<User>(DBCollections.USERS).insertOne(
-        { ...userAddInput, password: hashPassword, userSigningKey: salt, createdAt: now, modifiedAt: now, isDeleted: false },
+        { ...userAddInput, password: hashPassword, userSigningKey: salt, createdAt: now, modifiedAt: now, isDeleted: false, islogin: false },
         {
           session,
         },
@@ -60,8 +88,54 @@ export class UserService {
     }
   }
 
+  async users(input: UsersGetInput): Promise<UserGetResponse> {
+    try {
+      const sortOptions = this.sort(input.sort || UsersSort.NEWEST)
+      const filterOptions = this.filter(input?.filter || {})
+      const skip = (input.page ? input.page - 1 : 1 - 1) * (input.perPage || PER_PAGE)
+      const [nodes, total] = await Promise.all([
+        await db
+          .collection<User>(DBCollections.USERS)
+          .find(filterOptions)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(input.perPage || PER_PAGE)
+          .toArray(),
+        await db.collection<User>(DBCollections.USERS).find(filterOptions).count(),
+      ])
+      const hasNextPage = (input.page || 1) * (input.perPage || PER_PAGE) < total
+      return { nodes, pageInfo: { total, hasNextPage, perPage: input.perPage || PER_PAGE, currentPage: input.page || 1 } }
+    } catch (error) {
+      throw new Error('not found users')
+    }
+  }
+
+  async userIsLoginEdit(filter: { _id: string }, session?: ClientSession): Promise<User> {
+    const resource = await this.user({ _id: filter._id })
+    if (!resource) {
+      throw new Error('NOT FOUND')
+    }
+
+    const mergedResource = mergeDeepRight(resource, {}) as User
+
+    await db.collection<User>(DBCollections.USERS).updateOne(
+      {
+        _id: new ObjectId(filter._id),
+        isDeleted: false,
+      },
+      {
+        $set: { islogin: true, modifiedAt: new Date() },
+      },
+      { session },
+    )
+
+    return mergedResource
+  }
+
   async logIn(loginInput: UserAddInput): Promise<LoginResponse> {
     try {
+      const usersLogin = await (await this.users({ filter: { islogin: true } })).pageInfo.total
+      if (usersLogin >= 2) throw new Error('Login 2 users')
       const user = await db.collection<User>(DBCollections.USERS).findOne({
         username: sanitizeUsername(loginInput.username),
         isDeleted: false,
@@ -82,6 +156,10 @@ export class UserService {
         },
         user.userSigningKey,
       )
+
+      if (token) {
+        this.userIsLoginEdit({ _id: user._id })
+      }
 
       return {
         token,

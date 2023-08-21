@@ -14,3 +14,8 @@ export class BaseDocument {
 
   isDeleted: boolean
 }
+
+export interface ResourcesSortOptions {
+  NEWEST: { createdAt: -1 }
+  OLDEST: { createdAt: 1 }
+}

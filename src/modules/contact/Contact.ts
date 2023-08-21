@@ -1,6 +1,6 @@
 import { ClientSession, FilterQuery, ObjectId } from 'mongodb'
 import { db } from '../../db'
-import { DBCollections } from '../../types'
+import { DBCollections, ResourcesSortOptions } from '../../types'
 import { parsePhoneNumber, sanitizeUsername } from '../../helpers'
 import Error from '../../interfaces/error.interfaces'
 import secrets from '../../secrets'
@@ -13,7 +13,6 @@ import {
   ContactsGetInput,
   ContactsSort,
   Keysof,
-  ResourcesSortOptions,
 } from './types'
 import { PER_PAGE } from '../../constants'
 import { mergeDeepRight, omit } from 'ramda'

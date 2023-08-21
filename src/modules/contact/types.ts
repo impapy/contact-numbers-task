@@ -1,10 +1,4 @@
 import { ObjectId } from 'mongodb'
-import { PER_PAGE } from '../../constants'
-
-export interface ResourcesSortOptions {
-  NEWEST: { createdAt: -1 }
-  OLDEST: { createdAt: 1 }
-}
 
 export enum ContactsSort {
   NEWEST = 'NEWEST',
