@@ -5,6 +5,8 @@ import errorMiddleware from './middleware/error.middleware'
 import secrets from './secrets'
 import { connectToDB } from './db'
 import routes from './routes'
+import { Server } from 'socket.io'
+import http from 'http'
 
 const checkEnvVariables = () => {
   for (const key in secrets) {
@@ -20,6 +22,9 @@ const main = async (): Promise<void> => {
   app.use(helmet())
   app.use(exppress.json())
 
+  const server = http.createServer(app)
+  const io = new Server(server)
+
   app.use('/api', routes)
   app.get('/', (req: Request, res: Response) => {
     res.json({
@@ -33,7 +38,7 @@ const main = async (): Promise<void> => {
     })
   })
 
-  app.listen(secrets.PORT || 5000, () => {
+  server.listen(secrets.PORT || 5000, () => {
     console.log(`server ready on http://localhost:${secrets.PORT || 5000}`)
   })
 }
