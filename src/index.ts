@@ -7,13 +7,14 @@ import { connectToDB } from './db'
 import routes from './routes'
 import { Server } from 'socket.io'
 import http from 'http'
+import { ContactService } from './modules/contact/Contact'
 
 const checkEnvVariables = () => {
   for (const key in secrets) {
     if (!secrets[key as keyof typeof secrets]) console.warn(`env variable ${key} is not set`) // eslint-disable-line no-console
   }
 }
-
+const contactService = new ContactService()
 const main = async (): Promise<void> => {
   await connectToDB()
   checkEnvVariables()
@@ -24,6 +25,13 @@ const main = async (): Promise<void> => {
 
   const server = http.createServer(app)
   const io = new Server(server)
+
+  io.on('connection', (socket) => {
+    socket.on('update', async () => {
+      const contacts = await contactService.contacts({})
+      io.emit('res', contacts)
+    })
+  })
 
   app.use('/api', routes)
   app.get('/', (req: Request, res: Response) => {
