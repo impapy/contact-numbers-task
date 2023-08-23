@@ -20,6 +20,10 @@ const main = async (): Promise<void> => {
   checkEnvVariables()
   const app: Application = exppress()
 
+  app.use(cors())
+  app.use(helmet())
+  app.use(exppress.json())
+  
   const server = http.createServer(app)
   const io = new Server(server)
 
@@ -43,9 +47,6 @@ const main = async (): Promise<void> => {
     })
   })
   
-  app.use(cors())
-  app.use(helmet())
-  app.use(exppress.json())
 
   server.listen(secrets.PORT || 5000, () => {
     console.log(`server ready on http://localhost:${secrets.PORT || 5000}`)
