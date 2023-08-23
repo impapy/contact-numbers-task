@@ -110,7 +110,7 @@ export class UserService {
     }
   }
 
-  async userIsLoginEdit(filter: { _id: string }, session?: ClientSession): Promise<User> {
+  async userIsLoginEdit(filter: { _id: string }, islogin: boolean, session?: ClientSession): Promise<User> {
     const resource = await this.user({ _id: filter._id })
     if (!resource) {
       throw new Error('NOT FOUND')
@@ -124,7 +124,7 @@ export class UserService {
         isDeleted: false,
       },
       {
-        $set: { islogin: true, modifiedAt: new Date() },
+        $set: { islogin, modifiedAt: new Date() },
       },
       { session },
     )
@@ -158,13 +158,21 @@ export class UserService {
       )
 
       if (token) {
-        this.userIsLoginEdit({ _id: user._id })
+        this.userIsLoginEdit({ _id: user._id }, true)
       }
 
       return {
         token,
         user: user!,
       }
+    } catch (error) {
+      throw new Error(` ${(error as Error).message}`)
+    }
+  }
+
+  async logOut(_id: string) {
+    try {
+      this.userIsLoginEdit({ _id }, false)
     } catch (error) {
       throw new Error(` ${(error as Error).message}`)
     }

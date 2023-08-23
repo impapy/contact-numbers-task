@@ -7,5 +7,6 @@ const routes = Router()
 routes.post('/', controller.createUser)
 routes.get('/:_id', validateTokenAuth, controller.user)
 routes.post('/login', controller.logIn)
+routes.post('/logout',validateTokenAuth, controller.logOut)
 
 export default routes

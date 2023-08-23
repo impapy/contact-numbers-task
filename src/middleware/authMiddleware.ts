@@ -23,6 +23,7 @@ const validateTokenAuth = async (req: Request, res: Response, next: NextFunction
         const user = await userService.user({ _id: data.user })
         const payload = verify(token, `${secrets.JWT_SECRET}${user?.userSigningKey}`) as Payload
         if (payload) {
+          req.cookies = payload.user
           next()
         } else {
           handelUnAuthError(next)

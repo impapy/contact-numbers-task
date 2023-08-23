@@ -59,3 +59,15 @@ export const logIn = async (req: Request, res: Response, next: NextFunction) => 
     next(error)
   }
 }
+export const logOut = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await userService.logOut(req.cookies)
+
+    res.json({
+      status: 'succss',
+      message: ' logout succss',
+    })
+  } catch (error) {
+    next(error)
+  }
+}
